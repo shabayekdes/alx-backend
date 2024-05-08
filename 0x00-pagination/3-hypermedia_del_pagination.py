@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Task 2: Hypermedia pagination
+"""Task 3: Deletion-resilient hypermedia pagination
 """
 
 import csv
@@ -21,6 +21,7 @@ class Server:
 
     def __init__(self):
         self.__dataset = None
+        self.__indexed_dataset = None
 
     def _load_dataset(self) -> List[List]:
         """Load dataset from CSV file."""
@@ -56,16 +57,45 @@ class Server:
         total_records = len(data)
         return math.ceil(total_records / page_size)
 
-    def get_hyper(self, page: int = 1, page_size: int = 10) -> Dict:
-        """Retrieves information about a page.
+    def indexed_dataset(self) -> Dict[int, List]:
+        """Dataset indexed by sorting position, starting at 0
         """
-        data = self.get_page(page, page_size)
-        start, end = index_range(page, page_size)
-        return {
-            'page_size': len(data),
-            'page': page,
-            'data': data,
-            'next_page': page + 1 if end < len(self.__dataset) else None,
-            'prev_page': page - 1 if start > 0 else None,
-            'total_pages': self.total_pages(page_size)
+        if self.__indexed_dataset is None:
+            dataset = self._load_dataset()
+            truncated_dataset = dataset[:1000]
+            self.__indexed_dataset = {
+                i: dataset[i] for i in range(len(dataset))
+            }
+        return self.__indexed_dataset
+
+
+    def get_hyper_index(self, page: int = 1, page_size: int = 10) -> Dict:
+        """Retrieve information about a page by page number and size."""
+        assert page > 0 and page_size > 0
+
+        indexed_data = self.indexed_dataset()
+        total_records = len(indexed_data)
+        total_pages = self.total_pages(page_size)
+
+        if page > total_pages:
+            return {
+                'index': None,
+                'next_index': None,
+                'page_size': 0,
+                'data': []
+            }
+
+        start_index, end_index = index_range(page, page_size)
+
+        page_data = [indexed_data[i] for i in range(start_index, end_index) if i in indexed_data]
+
+        next_index = end_index if end_index < total_records else None
+
+        page_info = {
+            'index': start_index,
+            'next_index': next_index,
+            'page_size': len(page_data),
+            'data': page_data,
         }
+
+        return page_info
