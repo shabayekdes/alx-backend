@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pagination helper function.
+"""Task 1: Simple helper function
 """
 from typing import Tuple
 
