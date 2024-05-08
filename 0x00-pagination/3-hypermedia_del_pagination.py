@@ -51,12 +51,6 @@ class Server:
         start, end = index_range(page, page_size)
         return data[start:end]
 
-    def total_pages(self, page_size: int = 10) -> int:
-        """Calculates the total number of pages."""
-        data = self._load_dataset()
-        total_records = len(data)
-        return math.ceil(total_records / page_size)
-
     def indexed_dataset(self) -> Dict[int, List]:
         """Dataset indexed by sorting position, starting at 0
         """
@@ -68,34 +62,31 @@ class Server:
             }
         return self.__indexed_dataset
 
+    def get_hyper_index(self, index: int = None,
+                        page_size: int = 10) -> Dict:
+        """ return all data"""
 
-    def get_hyper_index(self, page: int = 1, page_size: int = 10) -> Dict:
-        """Retrieve information about a page by page number and size."""
-        assert page > 0 and page_size > 0
+        if index is None:
+            index = 0
 
-        indexed_data = self.indexed_dataset()
-        total_records = len(indexed_data)
-        total_pages = self.total_pages(page_size)
+        # validate the index
+        assert isinstance(index, int)
+        assert 0 <= index < len(self.indexed_dataset())
+        assert isinstance(page_size, int) and page_size > 0
 
-        if page > total_pages:
-            return {
-                'index': None,
-                'next_index': None,
-                'page_size': 0,
-                'data': []
-            }
+        data = []  # collect all indexed data
+        next_index = index + page_size
 
-        start_index, end_index = index_range(page, page_size)
+        for value in range(index, next_index):
+            if self.indexed_dataset().get(value):
+                data.append(self.indexed_dataset()[value])
+            else:
+                value += 1
+                next_index += 1
 
-        page_data = [indexed_data[i] for i in range(start_index, end_index) if i in indexed_data]
-
-        next_index = end_index if end_index < total_records else None
-
-        page_info = {
-            'index': start_index,
-            'next_index': next_index,
-            'page_size': len(page_data),
-            'data': page_data,
+        return {
+            'index': index,
+            'data': data,
+            'page_size': page_size,
+            'next_index': next_index
         }
-
-        return page_info
