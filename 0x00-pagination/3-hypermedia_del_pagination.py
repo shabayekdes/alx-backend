@@ -45,7 +45,6 @@ class Server:
         if index is None:
             index = 0
 
-
         assert isinstance(index, int)
         assert 0 <= index < len(self.indexed_dataset())
         assert isinstance(page_size, int) and page_size > 0
